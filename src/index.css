@@ -1,0 +1,75 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Lumière — light theme (mockups): cream, dark bar, gold/amber accents */
+
+@layer base {
+  :root {
+    --background: 40 32% 94%;
+    --foreground: 25 22% 12%;
+
+    --card: 40 25% 96%;
+    --card-foreground: 25 22% 12%;
+
+    --popover: 40 25% 98%;
+    --popover-foreground: 25 22% 12%;
+
+    --primary: 38 48% 44%;
+    --primary-foreground: 40 32% 98%;
+
+    --secondary: 40 20% 88%;
+    --secondary-foreground: 25 22% 12%;
+
+    --muted: 40 15% 88%;
+    --muted-foreground: 25 8% 40%;
+
+    --accent: 38 35% 88%;
+    --accent-foreground: 25 22% 12%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 35 16% 82%;
+    --input: 35 16% 82%;
+    --ring: 38 48% 44%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 25 18% 15%;
+    --sidebar-foreground: 40 20% 92%;
+    --sidebar-primary: 38 48% 44%;
+    --sidebar-primary-foreground: 40 32% 98%;
+    --sidebar-accent: 25 14% 22%;
+    --sidebar-accent-foreground: 40 20% 92%;
+    --sidebar-border: 25 12% 22%;
+    --sidebar-ring: 38 48% 44%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-background text-foreground;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased font-sans text-[15px];
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-heading {
+    @apply font-serif text-lumiere-ink;
+  }
+
+  ::selection {
+    @apply bg-lumiere-gold/30 text-lumiere-ink;
+  }
+}
