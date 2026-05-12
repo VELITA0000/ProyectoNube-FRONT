@@ -1,0 +1,79 @@
+name: APP Deploy (S3 + CloudFront)
+
+# Builds the SPA with the real production env, uploads it to the S3 frontend
+# bucket, and invalidates the CloudFront distribution so visitors see the new
+# bundle on the next request. Mirrors `APP/update.sh`. Runs on every push to
+# `main` and on manual dispatch.
+#
+# Required SECRETS (Settings → Secrets → Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+#       AWS Academy lab credentials. AWS_SESSION_TOKEN is required because
+#       Academy issues short-lived STS tokens; rotate every 4 hours.
+#   VITE_STRIPE_PUBLISHABLE_KEY
+#       Stripe publishable key (pk_test_… / pk_live_…). Stored as a secret
+#       even though it is a public key, so it never lands in plain logs.
+#
+# Required VARIABLES (Settings → Variables → Actions):
+#   AWS_REGION                  e.g. us-east-1
+#   VITE_API_BASE_URL           e.g. https://xxx.execute-api.us-east-1.amazonaws.com
+#   S3_FRONTEND_BUCKET          e.g. photo-app-prod-spa-XXXXXXXXX
+#   CLOUDFRONT_DISTRIBUTION_ID  e.g. EXXXXXXXXXX
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build + s3 sync + cloudfront invalidate
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Vite reads VITE_* from the process env at build time, so we set them
+      # inline instead of writing a .env file. Behaviour is identical to
+      # APP/create.sh.
+      - name: Build SPA
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: aws s3 sync dist/ → frontend bucket
+        run: aws s3 sync dist/ "s3://${{ vars.S3_FRONTEND_BUCKET }}/" --delete --no-progress
+
+      - name: CloudFront invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*" \
+            --no-cli-pager
